@@ -130,11 +130,55 @@ ejecución de la tarea `test`.
 
 ## Estado de los tests
 
-El escenario `TC-SIGNUP-01` está en
-`src/test/resources/Feature/CreateUser/CreateUser.feature`. La apertura de la
-URL está implementada y quedan nueve definiciones de pasos pendientes.
+El archivo `src/test/resources/Feature/CreateUser/CreateUser.feature` contiene
+el escenario completo `TC-SIGNUP-01` y dos escenarios `@userId`. Uno comprueba
+la escritura directa y sustitución del campo; el otro genera User ID desde la
+tabla y después lo sustituye por un valor explícito. Todos utilizan la
+navegación **Sign In → Register Now** y validan que el formulario esté visible.
 
-Gradle ya descubre el escenario mediante la suite compartida. La ejecución
-real todavía requiere completar los pasos y las validaciones del registro
-y del inicio de sesión. El siguiente paso del trabajo guiado es implementar
-la navegación desde **Sign In** hasta el formulario de registro.
+Para ejecutar únicamente las pruebas de User ID en macOS, utiliza:
+
+```bash
+JAVA_TOOL_OPTIONS=-Dcucumber.filter.tags=@userId ./gradlew test --rerun-tasks
+```
+
+Este comando aplica el filtro al proceso Java de pruebas. En esta suite con
+JUnit Platform, `CUCUMBER_FILTER_TAGS=@userId` no filtró los escenarios durante
+la verificación del 9 de noviembre de 2026.
+
+La prueba directa escribe `UQA0000001` y lo reemplaza por `UQA0000002`,
+comprobando el contenido después de cada acción. El localizador
+`By.name("username")` se confirmó en el HTML de `/account/new`.
+
+El paso `completa el formulario con los siguientes datos:` ya recibe la
+`DataTable` de Gherkin. Usa `asMaps(String.class, String.class)` para leer cada
+fila por sus encabezados `Campo` y `Valor`. Comprueba que exista al menos una
+fila de datos, que los encabezados sean los esperados y que cada campo y valor
+contengan texto. Actualmente completa y verifica User ID: la indicación
+`U + 9 caracteres alfanuméricos generados` produce un identificador con ese
+formato mediante Commons Lang, ya declarado en el proyecto. Si la tabla trae
+un valor explícito, lo utiliza tal como está. Conserva el valor en el estado
+del escenario para el futuro login.
+
+El 10 de noviembre de 2026 las dos pruebas de User ID pasan con Chrome. La
+prueba de tabla comprueba el formato generado, su igualdad con el contenido
+del campo y su sustitución por `UQA0000003`.
+
+La suite completa ejecuta tres escenarios: los dos de User ID pasan y
+`TC-SIGNUP-01` queda pendiente, registrado como fallo por Gradle. En ese flujo
+ya se completó y verificó User ID. El mensaje enumera los once campos que aún
+faltan: New password, Repeat password, First name, Last name, Email, Phone,
+Address 1, City, State, Zip y Country. No se guarda la cuenta.
+
+Para terminar `TC-SIGNUP-01` se mantienen estos hitos pendientes, que requieren
+acordar la siguiente etapa antes de ampliar la implementación:
+
+- [ ] Completar y comprobar New password y Repeat password.
+- [ ] Completar los datos personales y la dirección.
+- [ ] Sustituir `{timestamp}` y completar Email.
+- [ ] Comprobar las preferencias por defecto.
+- [ ] Implementar el clic en Save Account Information.
+- [ ] Validar la redirección y confirmar el registro de la cuenta.
+- [ ] Reutilizar las credenciales para iniciar sesión y comprobar el resultado.
+- [ ] Revisar si el texto `docs` demuestra el resultado esperado del registro
+  y de la autenticación.

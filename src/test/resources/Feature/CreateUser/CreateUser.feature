@@ -9,6 +9,24 @@ Feature: Registro de Nueva Cuenta de Usuario (Sign Up)
     And da click en "Register Now"
     Then ingresa a la página de registro
 
+  @userId
+  Scenario: Completar y reemplazar el User ID sin guardar la cuenta
+    When ingresa el User ID "UQA0000001" en el formulario de registro
+    Then el campo User ID del registro contiene "UQA0000001"
+    When ingresa el User ID "UQA0000002" en el formulario de registro
+    Then el campo User ID del registro contiene "UQA0000002"
+
+  @userId @userIdTabla
+  Scenario: Generar y completar el User ID desde la tabla
+    When completa el formulario con los siguientes datos:
+      | Campo   | Valor                                  |
+      | User ID | U + 9 caracteres alfanuméricos generados |
+    Then el campo User ID del registro contiene el identificador generado
+    When completa el formulario con los siguientes datos:
+      | Campo   | Valor      |
+      | User ID | UQA0000003 |
+    Then el campo User ID del registro contiene "UQA0000003"
+
   # ---------------------------------------------------------------------------
   # FLUJOS POSITIVOS (HAPPY PATH)
   # ---------------------------------------------------------------------------

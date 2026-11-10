@@ -1,15 +1,18 @@
 # Resumen
 
-Contexto actualizado el 5 de noviembre de 2026. PetStoreAutomation automatiza
+Contexto actualizado el 10 de noviembre de 2026. PetStoreAutomation automatiza
 pruebas web de JPetStore con Selenium y Cucumber. El entorno de trabajo es macOS
 con Java 21. La raíz actual es
 `/Users/dessireesanchez/Proyectos/PetStoreAutomation`.
 
-El escenario TC-SIGNUP-01 está iniciado. Solo está implementada la apertura de
-la URL; nueve definiciones de pasos lanzan `PendingException`. La suite de
-Cucumber ya permite ejecutar el escenario desde Gradle. La ejecución real
-abre Chrome y completa el acceso a la URL; se detiene en el clic **Sign In**
-porque ese paso todavía está pendiente.
+La apertura de la URL, los clics **Sign In → Register Now** y la validación del
+formulario están implementados. Dos escenarios `@userId` comprueban la
+escritura directa y la generación y escritura desde la tabla, incluyendo la
+sustitución por valores explícitos. La suite de Cucumber permite ejecutar los
+escenarios desde Gradle. El paso del formulario recibe y lee las doce filas;
+completa User ID y conserva su valor por escenario. TC-SIGNUP-01 continúa
+pendiente: se detiene explícitamente después de verificar User ID y enumera
+los once campos restantes. No se guarda la cuenta.
 
 # Arquitectura y módulos
 
@@ -19,7 +22,12 @@ responsabilidad:
 - `driver/DriverManager.java`: crea un ChromeDriver por hilo y lo cierra.
 - `hook/Hook.java`: obtiene y cierra el driver antes y después del escenario.
 - `page/BasePage.java`: navegación, búsqueda, interacción y esperas.
-- `page/HomePage.java`: apertura de la URL.
+- `page/HomePage.java`: apertura de la URL y clic en **Sign In**.
+- `page/SignInPage.java`: clic en **Register Now**.
+- `page/RegistrationPage.java`: validación del formulario y escritura y lectura
+  de User ID mediante `By.name("username")`.
+- `interfaces/ButtonClick.java`: contrato `darClick()` implementado por
+  `HomePage` y `SignInPage`.
 - `steps/CreateUserStep.java`: definiciones de los pasos de registro y login.
 - `runner/RunCucumberTest.java`: suite JUnit Platform para el motor Cucumber,
   los recursos `Feature` y el glue `steps,hook`.
@@ -65,15 +73,31 @@ de obsolescencia de Gradle para esas declaraciones.
 
 # Contratos (si existen)
 
-El feature describe el comportamiento esperado. No existen interfaces Java ni
-contratos de API. El método del paso que completa el formulario todavía no
-recibe la tabla de datos que entrega Gherkin.
+El feature describe el comportamiento esperado. La interfaz `ButtonClick`
+define `void darClick()`. No existen contratos de API. El método del paso que
+completa el formulario recibe `DataTable tabla` y utiliza los encabezados
+`Campo` y `Valor`. Requiere al menos una fila de datos y nombres y valores con
+texto. Completa User ID y comprueba su contenido. Si quedan campos sin
+implementar, lanza una `PendingException` con sus nombres. Una tabla que solo
+contiene User ID termina correctamente.
 
 # Módulos de datos
 
 Los datos se describen en el feature. No existen modelos ni archivos externos
-de datos. La generación del usuario, la sustitución de `{timestamp}` y la
-conservación de las credenciales para el login están pendientes.
+de datos. La tabla se convierte en `List<Map<String, String>>` con
+`asMaps(String.class, String.class)`.
+
+Para User ID, la indicación `U + 9 caracteres alfanuméricos generados` se
+resuelve con `"U" + RandomStringUtils.randomAlphanumeric(9)`, reutilizando
+Commons Lang. Los valores explícitos se conservan. `userIdRegistro` guarda el
+identificador en la instancia de pasos del escenario; su reutilización en el
+login todavía está pendiente. La generación aleatoria no garantiza que el
+nombre esté disponible en el servidor.
+
+Los demás valores todavía se leen como texto. La sustitución de `{timestamp}`
+del correo y la conservación y reutilización de la contraseña están
+pendientes. No se imprimen los valores de las filas, que incluyen contraseñas
+de prueba.
 
 # Estándares y convenciones del código
 
@@ -102,6 +126,53 @@ descubrimiento sin ejecutar hooks ni acciones. El valor predeterminado es
 en `build/reports/tests/test/index.html` para la última ejecución.
 
 # Riesgos, supuestos y limitaciones
+
+Verificaciones realizadas el 10 de noviembre de 2026:
+
+- El escenario nuevo de User ID desde tabla falla antes de implementar el
+  llenado, con el mensaje previo de tabla recibida y llenado pendiente.
+- Tras implementar la generación y escritura, el comando
+  `JAVA_TOOL_OPTIONS=-Dcucumber.filter.tags=@userId ./gradlew test
+  --rerun-tasks --no-daemon --console=plain` termina con `BUILD SUCCESSFUL`:
+  dos escenarios aprobados y TC-SIGNUP-01 omitido por el filtro.
+- La prueba nueva valida `U[A-Za-z0-9]{9}`, compara el valor conservado en el
+  escenario con el campo y después escribe el valor explícito `UQA0000003`
+  mediante otra tabla.
+- `./gradlew test --rerun-tasks --no-daemon --console=plain` ejecuta tres
+  escenarios: dos aprobados y TC-SIGNUP-01 pendiente, registrado como fallo
+  por Gradle. El escenario completo escribe y verifica User ID; después
+  enumera los once campos sin implementar. No se guarda ninguna cuenta.
+- Quedan pendientes las contraseñas, los datos de contacto, el correo
+  dinámico, las preferencias, el guardado y las validaciones de registro y
+  login. También debe revisarse si el texto `docs` del feature confirma
+  realmente los resultados esperados.
+
+Verificaciones realizadas el 9 de noviembre de 2026:
+
+- Se confirmó `name="username"` en el HTML público de `/account/new`.
+- Antes de conectar la validación, el escenario falla con `PendingException`
+  en `ingresa a la página de registro`.
+- Tras conectar la validación, los cuatro pasos del Background pasan y el
+  escenario focalizado falla por los nuevos pasos de User ID sin definir.
+- Con las acciones implementadas, `JAVA_TOOL_OPTIONS=-Dcucumber.filter.tags=@userId
+  ./gradlew test --rerun-tasks --no-daemon --console=plain` termina con
+  `BUILD SUCCESSFUL`: el escenario de User ID pasa y TC-SIGNUP-01 se omite.
+- Antes de conectar la tabla, `./gradlew test --rerun-tasks --no-daemon
+  --console=plain` ejecuta dos escenarios: User ID pasa y TC-SIGNUP-01 falla
+  por la incompatibilidad de parámetros del paso con tabla.
+- Tras agregar `DataTable tabla` y la lectura de filas, el mismo comando
+  vuelve a ejecutar ambos escenarios con Chrome. User ID pasa y TC-SIGNUP-01
+  queda pendiente con `Tabla recibida y leída: 12 campos. Pendiente: completar
+  el formulario con estos datos.` Gradle registra ese pendiente como fallo.
+  Desaparece el error de parámetros. No se completaron otros campos ni se
+  envió el formulario.
+- `CUCUMBER_FILTER_TAGS=@userId` no filtró esta suite con JUnit Platform;
+  el filtro mediante propiedad Java sí funcionó.
+- El launcher Java emite una advertencia de acceso nativo restringido de
+  Gradle. No impide ejecutar las pruebas y no se cambió la configuración Java.
+
+Las verificaciones del 4 de noviembre que aparecen a continuación son
+históricas y describen el estado anterior a la implementación de los clics.
 
 La preparación de macOS establece Java 21 en Gradle e IntelliJ y conserva el
 permiso de ejecución de `gradlew`. El SDK debe registrarse en IntelliJ con el
@@ -155,9 +226,10 @@ una restricción de escritura del archivo de bloqueo bajo `~/.gradle` en esta
 sesión. Las invocaciones directas de `./gradlew` sí pudieron completar la
 compilación descrita. Esa limitación no se atribuye al código del proyecto.
 
-Continúan pendientes los pasos, las comprobaciones del resultado del registro
+Continúan pendientes los demás pasos, las comprobaciones del resultado del registro
 y del login, la revisión de las demás dependencias y la combinación de esperas
-implícitas y explícitas. No se observa un repositorio Git en esta copia.
+implícitas y explícitas. Esta copia tiene un repositorio Git y contiene cambios
+locales anteriores a esta implementación, que se conservaron.
 
 `context_analisis_2026-11-03.md` conserva el análisis histórico del entorno
 Windows. Sus rutas son históricas; Java 21 vuelve a ser la versión del proyecto.
