@@ -12,7 +12,7 @@ import page.HomePage;
 import page.SignInPage;
 import page.RegistrationPage;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,12 +24,13 @@ public class CreateUserStep {
     private static final String GENERAR_USER_ID =
             "U + 9 caracteres alfanuméricos generados";
 
-    private String userIdRegistro;
+    private final Map<String, String> datosRegistro = new HashMap<>();
+    private final String timestamp = Long.toString(System.currentTimeMillis());
 
-    HomePage homePage = new HomePage(DriverManager.getDriver());
-    SignInPage signInPage =
+    private final HomePage homePage = new HomePage(DriverManager.getDriver());
+    private final SignInPage signInPage =
             new SignInPage(DriverManager.getDriver());
-    RegistrationPage registrationPage =
+    private final RegistrationPage registrationPage =
             new RegistrationPage(DriverManager.getDriver());
 
     @Given("ingresa en esta URL {string}")
@@ -47,6 +48,10 @@ public class CreateUserStep {
 
             case "Register Now":
                 signInPage.darClick();
+                break;
+
+            case "Save Account Information":
+                registrationPage.saveAccountInformation();
                 break;
 
             default:
@@ -77,12 +82,12 @@ public class CreateUserStep {
 
     @Then("el campo User ID del registro contiene el identificador generado")
     public void elCampoUserIdContieneElIdentificadorGenerado() {
-        assertThat(userIdRegistro)
+        assertThat(datosRegistro.get("User ID"))
                 .as("El User ID generado debe ser U seguida de nueve caracteres alfanuméricos")
                 .matches("U[A-Za-z0-9]{9}");
         assertThat(registrationPage.getUserId())
                 .as("El formulario debe contener el User ID generado para este escenario")
-                .isEqualTo(userIdRegistro);
+                .isEqualTo(datosRegistro.get("User ID"));
     }
 
     @When("completa el formulario con los siguientes datos:")
@@ -96,7 +101,6 @@ public class CreateUserStep {
 
         List<Map<String, String>> filas =
                 tabla.asMaps(String.class, String.class);
-        List<String> camposPendientes = new ArrayList<>();
 
         for (Map<String, String> fila : filas) {
             String campo = fila.get("Campo");
@@ -109,64 +113,80 @@ public class CreateUserStep {
                     .as("El campo '%s' debe tener un valor de prueba", campo)
                     .isNotBlank();
 
-            if ("User ID".equals(campo)) {
-                completarUserIdRegistro(valor);
-            } else {
-                camposPendientes.add(campo);
-            }
-        }
-
-        if (!camposPendientes.isEmpty()) {
-            throw new PendingException(
-                    "Tabla leída: " + filas.size() + " campos. Pendiente completar: "
-                            + String.join(", ", camposPendientes)
-            );
+            String resuelto = resolverValor(campo, valor);
+            registrationPage.enterField(campo, resuelto);
+            assertThat(resuelto.equals(registrationPage.getFieldValue(campo)))
+                    .as("El campo '%s' debe contener el valor resuelto", campo)
+                    .isTrue();
+            datosRegistro.put(campo, resuelto);
         }
     }
 
-    private void completarUserIdRegistro(String valor) {
-        userIdRegistro = GENERAR_USER_ID.equals(valor)
-                ? "U" + RandomStringUtils.randomAlphanumeric(9)
-                : valor;
-        registrationPage.enterUserId(userIdRegistro);
-        assertThat(registrationPage.getUserId())
-                .as("El formulario debe contener el User ID resuelto desde la tabla")
-                .isEqualTo(userIdRegistro);
+    private String resolverValor(String campo, String valor) {
+        if ("User ID".equals(campo) && GENERAR_USER_ID.equals(valor)) {
+            return "U" + RandomStringUtils.randomAlphanumeric(9);
+        }
+        if ("Email".equals(campo)) {
+            return valor.replace("{timestamp}", timestamp);
+        }
+        return valor;
     }
 
-    @And("deja las preferencias de perfil con sus valores por defecto")
-    public void dejaLasPreferenciasDePerfilConSusValoresPorDefecto() {
-        // Write code here that turns the phrase above into concrete actions
-        throw new PendingException();
+    @Then("el campo Email del registro contiene un timestamp generado")
+    public void elEmailContieneUnTimestampGenerado() {
+        assertThat(registrationPage.getFieldValue("Email"))
+                .matches("qa_user_[0-9]+@testpetstore[.]com");
+    }
+
+    @Then("las preferencias de perfil tienen sus valores por defecto")
+    public void lasPreferenciasDePerfilTienenSusValoresPorDefecto() {
+        assertThat(registrationPage.getLanguagePreference()).isEqualTo("english");
+        assertThat(registrationPage.getFavouriteCategory()).isEqualTo("FISH");
+        assertThat(registrationPage.isMyListSelected()).isFalse();
+        assertThat(registrationPage.isMyBannerSelected()).isFalse();
     }
 
     @Then("el sistema redirige a la página de inicio {string}")
-    public void elSistemaRedirigeALaPáginaDeInicio(String arg0) {
-        // Write code here that turns the phrase above into concrete actions
-        throw new PendingException();
+    public void elSistemaRedirigeALaPáginaDeInicio(String path) {
+        homePage.waitForPath(path);
+        assertThat(homePage.getCurrentPath()).isEqualTo(path);
     }
 
-    @And("la página de inicio muestra el texto {string}")
-    public void laPáginaDeInicioMuestraElTexto(String arg0) {
-        // Write code here that turns the phrase above into concrete actions
-        throw new PendingException();
+    @Then("la página de inicio está en sesión anónima")
+    public void laPaginaDeInicioEstaEnSesionAnonima() {
+        assertThat(homePage.getNavigationLinks())
+                .contains("Sign In")
+                .doesNotContain("Sign Out", "My Account");
+    }
+
+    @Then("la página de inicio muestra al usuario registrado autenticado")
+    public void laPaginaMuestraAlUsuarioRegistradoAutenticado() {
+        homePage.waitForPath("/catalog");
+        assertThat(homePage.getNavigationLinks())
+                .contains("Sign Out", "My Account")
+                .doesNotContain("Sign In");
+        assertThat(homePage.getPageText())
+                .contains("Welcome " + datoRegistrado("First name") + "!");
     }
 
     @And("ingresa el User ID registrado")
     public void ingresaElUserIDRegistrado() {
-        // Write code here that turns the phrase above into concrete actions
-        throw new PendingException();
+        signInPage.enterUsername(datoRegistrado("User ID"));
     }
 
     @And("ingresa la contraseña registrada")
     public void ingresaLaContraseñaRegistrada() {
-        // Write code here that turns the phrase above into concrete actions
-        throw new PendingException();
+        signInPage.enterPassword(datoRegistrado("New password"));
     }
 
     @And("envía el formulario de inicio de sesión")
     public void envíaElFormularioDeInicioDeSesión() {
-        // Write code here that turns the phrase above into concrete actions
-        throw new PendingException();
+        signInPage.submit();
+    }
+
+    private String datoRegistrado(String campo) {
+        String valor = datosRegistro.get(campo);
+        assertThat(valor).as("Debe existir el dato registrado '%s'", campo).isNotBlank();
+        return valor;
     }
 }

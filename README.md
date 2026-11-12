@@ -209,31 +209,40 @@ El paso `completa el formulario con los siguientes datos:` ya recibe la
 `DataTable` de Gherkin. Usa `asMaps(String.class, String.class)` para leer cada
 fila por sus encabezados `Campo` y `Valor`. Comprueba que exista al menos una
 fila de datos, que los encabezados sean los esperados y que cada campo y valor
-contengan texto. Actualmente completa y verifica User ID: la indicación
+contengan texto. Completa y verifica los campos del registro: la indicación
 `U + 9 caracteres alfanuméricos generados` produce un identificador con ese
 formato mediante Commons Lang, ya declarado en el proyecto. Si la tabla trae
-un valor explícito, lo utiliza tal como está. Conserva el valor en el estado
-del escenario para el futuro login.
+un valor explícito, lo utiliza tal como está. Sustituye `{timestamp}` en Email
+y conserva los datos en la instancia de pasos del escenario para el login.
+La comprobación del email exige `qa_user_` seguido de dígitos y el dominio
+`testpetstore.com`, evitando aprobar un placeholder sin resolver.
 
 El 10 de noviembre de 2026 las dos pruebas de User ID pasan con Chrome. La
 prueba de tabla comprueba el formato generado, su igualdad con el contenido
 del campo y su sustitución por `UQA0000003`.
 
-La suite completa ejecuta tres escenarios: los dos de User ID pasan y
-`TC-SIGNUP-01` queda pendiente, registrado como fallo por Gradle. En ese flujo
-ya se completó y verificó User ID. El mensaje enumera los once campos que aún
-faltan: New password, Repeat password, First name, Last name, Email, Phone,
-Address 1, City, State, Zip y Country. No se guarda la cuenta.
+El 12 de noviembre de 2026 la suite completa aprueba los tres escenarios con
+Chrome. `TC-SIGNUP-01` completa los doce campos, comprueba las preferencias
+por defecto (`english`, `FISH`, MyList y MyBanner desmarcados) y pulsa
+**Save Account Information**. Comprueba la ruta `/catalog` con **Sign In**
+visible y sin **Sign Out** ni **My Account**. Después inicia sesión con el
+User ID y la contraseña recién registrados y comprueba **Sign Out**,
+**My Account** y el saludo con el nombre ingresado. Estas aserciones
+sustituyen la comprobación anterior del texto `docs`.
 
-Para terminar `TC-SIGNUP-01` se mantienen estos hitos pendientes, que requieren
-acordar la siguiente etapa antes de ampliar la implementación:
+Para ejecutar únicamente este recorrido real, utiliza:
 
-- [ ] Completar y comprobar New password y Repeat password.
-- [ ] Completar los datos personales y la dirección.
-- [ ] Sustituir `{timestamp}` y completar Email.
-- [ ] Comprobar las preferencias por defecto.
-- [ ] Implementar el clic en Save Account Information.
-- [ ] Validar la redirección y confirmar el registro de la cuenta.
-- [ ] Reutilizar las credenciales para iniciar sesión y comprobar el resultado.
-- [ ] Revisar si el texto `docs` demuestra el resultado esperado del registro
-  y de la autenticación.
+```bash
+./gradlew test -PcucumberTags="@smoke" --rerun-tasks
+```
+
+La ejecución completa o con `@smoke` crea una cuenta sintética en JPetStore.
+Las pruebas `@userId` solo escriben campos y no guardan cuentas. Los reportes
+quedan en las rutas indicadas arriba; el modo simulación no crea cuentas.
+
+La cobertura restante de prioridad alta sigue pendiente: variantes negativas
+de registro y Sign In, login positivo por email y Remember Me. La inspección
+por UI observó rechazo del login por email y ausencia de Remember Me; las
+expectativas de esos requisitos se mantienen. Los documentos de trabajo y
+los informes de defectos se conservan localmente en `IA/local/`. La prueba
+de vencimiento a los catorce días está excluida del alcance acordado.

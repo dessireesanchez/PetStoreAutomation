@@ -47,12 +47,13 @@ Feature: Registro de Nueva Cuenta de Usuario (Sign Up)
       | State           | Cundinamarca                               |
       | Zip             | 110111                                     |
       | Country         | Colombia                                   |
-    And deja las preferencias de perfil con sus valores por defecto
-    And da click en "Save Account Information"
+    Then el campo Email del registro contiene un timestamp generado
+    And las preferencias de perfil tienen sus valores por defecto
+    When da click en "Save Account Information"
     Then el sistema redirige a la página de inicio "/catalog"
-    And la página de inicio muestra el texto "docs"
+    And la página de inicio está en sesión anónima
     When da click en "Sign In"
     And ingresa el User ID registrado
     And ingresa la contraseña registrada
     And envía el formulario de inicio de sesión
-    Then la página de inicio muestra el texto "docs"
+    Then la página de inicio muestra al usuario registrado autenticado
