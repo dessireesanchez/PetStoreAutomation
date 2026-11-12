@@ -1,6 +1,6 @@
 # Resumen
 
-Contexto actualizado el 10 de noviembre de 2026. PetStoreAutomation automatiza
+Contexto actualizado el 12 de noviembre de 2026. PetStoreAutomation automatiza
 pruebas web de JPetStore con Selenium y Cucumber. El entorno de trabajo es macOS
 con Java 21. La raíz actual es
 `/Users/dessireesanchez/Proyectos/PetStoreAutomation`.
@@ -13,6 +13,20 @@ escenarios desde Gradle. El paso del formulario recibe y lee las doce filas;
 completa User ID y conserva su valor por escenario. TC-SIGNUP-01 continúa
 pendiente: se detiene explícitamente después de verificar User ID y enumera
 los once campos restantes. No se guarda la cuenta.
+
+El 12 de noviembre de 2026 se preparó
+`IA/local/cobertura_prioridad_alta_autenticacion.md` para la cobertura de registro
+y Sign In de prioridad alta, usando el plan de registro v4 y el documento
+funcional de Sign In, cuyas copias se conservan en `IA/local/`. La usuaria
+confirmó que se deben contrastar las reglas con JPetStore y reportar sus
+incumplimientos. No hay acceso a base de datos ni backend. El login debe
+aceptar tanto User ID como email. Los datos y resultados se prepararán y
+comprobarán por UI.
+La matriz incluye una investigación de Remember Me y la cobertura funcional
+aceptada por la usuaria. Se excluye expresamente la prueba de vencimiento a
+los catorce días; se mantienen las demás comprobaciones de persistencia y
+cierre de sesión. No implica escenarios nuevos implementados ni nuevas
+ejecuciones verificadas.
 
 # Arquitectura y módulos
 
@@ -109,6 +123,13 @@ Page Object y un `ThreadLocal` para el driver.
 `README.md` documenta la preparación en macOS. Los cambios de código o
 configuración relevantes deben reflejarse en este contexto.
 
+Por acuerdo con la usuaria, los únicos documentos de `IA/` que se mantienen
+versionados son `IA/context.md` y `IA/prompt_context.md`. Los documentos
+funcionales, planes, matrices e informes históricos se guardan en `IA/local/`,
+excluido localmente mediante `/IA/local/` en `.git/info/exclude`. Este archivo
+de exclusión no se versiona. El contexto conserva los acuerdos necesarios
+para trabajar; los documentos locales pueden no existir en otro clon.
+
 La raíz contiene `.sdkmanrc` para seleccionar Java en la terminal y el wrapper
 para fijar Gradle. `.gitattributes` establece LF para `gradlew` y CRLF para los
 archivos `.bat` cuando se utiliza Git. La configuración ejecutable no incluye
@@ -122,10 +143,53 @@ que deben versionarse.
 `./gradlew test` ejecuta la suite real. La opción `-PcucumberDryRun=true`
 habilita explícitamente `cucumber.execution.dry-run` para comprobar el
 descubrimiento sin ejecutar hooks ni acciones. El valor predeterminado es
-`false`. La suite usa los plugins `pretty,summary`, y Gradle genera el informe
-en `build/reports/tests/test/index.html` para la última ejecución.
+`false`. `-PcucumberTags` y `-PcucumberName` filtran por expresión de etiquetas
+y expresión regular del nombre completo; para coincidencias parciales se usa
+`.*`. Si se combinan, se aplican ambos filtros. Gradle
+reenvía estas opciones a la JVM de pruebas y admite las propiedades equivalentes
+`-Dcucumber.execution.dry-run`, `-Dcucumber.filter.tags` y
+`-Dcucumber.filter.name`. Las opciones `-P` tienen prioridad sobre `-D`.
+
+La suite tiene el nombre visible `Pruebas de JPetStore` y usa los plugins
+`pretty,summary,html,json,junit`. Los reportes Cucumber se escriben en
+`build/reports/cucumber/cucumber.html`, `cucumber.json` y `cucumber.xml`.
+Gradle registra ese directorio como salida de la tarea `test` y también genera
+`build/reports/tests/test/index.html`. Los reportes reflejan la última
+ejecución, incluidos sus filtros y el modo simulación.
 
 # Riesgos, supuestos y limitaciones
+
+Verificaciones realizadas el 12 de noviembre de 2026 antes de preparar el
+commit de filtros, reportes y documentación:
+
+- La simulación completa con `-PcucumberDryRun=true` descubre tres escenarios
+  únicos y genera los reportes HTML, JSON y XML de Cucumber.
+- La simulación mediante `-Dcucumber.execution.dry-run=true`, combinando
+  `-PcucumberTags=@userId` y `-PcucumberName=.*desde la tabla`, selecciona
+  únicamente el escenario de tabla. Las opciones `-P` prevalecen sobre los
+  filtros `-D` contradictorios pasados en el mismo comando.
+- La ejecución real con `-Dcucumber.filter.tags=@userId` aprueba los dos
+  escenarios implementados y omite el registro completo por el filtro.
+  No se guarda ninguna cuenta.
+- Las tres ejecuciones terminan con `BUILD SUCCESSFUL`, usando
+  `--rerun-tasks --no-daemon --console=plain --warning-mode=fail`.
+- En el índice de Git, `IA/` contiene únicamente `context.md` y
+  `prompt_context.md`. Los documentos de `IA/local/` quedan excluidos.
+
+Verificaciones realizadas el 11 de noviembre de 2026:
+
+- La simulación completa descubre tres escenarios únicos y genera reportes
+  HTML, JSON y JUnit XML válidos.
+- El filtro `@userId and not @userIdTabla` selecciona únicamente el escenario
+  de escritura directa. La combinación de filtros de nombre y etiquetas
+  selecciona el escenario de tabla y confirma la prioridad de `-P` sobre `-D`.
+- La expresión del nombre debe coincidir con el nombre completo; una expresión
+  parcial sin `.*` deja los escenarios omitidos en este motor.
+- La ejecución real con `-Dcucumber.filter.tags=@userId` pasa los dos escenarios
+  implementados. La ejecución completa con `./gradlew test --no-daemon
+  --console=plain --warning-mode=fail` ejecuta tres escenarios: dos pasan y
+  `TC-SIGNUP-01` falla con `PendingException`, enumerando los once campos del
+  formulario todavía sin implementar. No se guarda ninguna cuenta.
 
 Verificaciones realizadas el 10 de noviembre de 2026:
 
@@ -231,5 +295,6 @@ y del login, la revisión de las demás dependencias y la combinación de espera
 implícitas y explícitas. Esta copia tiene un repositorio Git y contiene cambios
 locales anteriores a esta implementación, que se conservaron.
 
-`context_analisis_2026-11-03.md` conserva el análisis histórico del entorno
-Windows. Sus rutas son históricas; Java 21 vuelve a ser la versión del proyecto.
+`IA/local/context_analisis_2026-11-03.md` conserva el análisis histórico del
+entorno Windows. Sus rutas son históricas; Java 21 vuelve a ser la versión
+del proyecto.

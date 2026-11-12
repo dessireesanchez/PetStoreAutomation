@@ -98,11 +98,12 @@ estar instalado para ejecutar los escenarios web; `DriverManager` utiliza
 
 ## Ejecutar Cucumber
 
-La suite `src/test/java/runner/RunCucumberTest.java` utiliza JUnit Platform para
-buscar los escenarios bajo `src/test/resources/Feature` y sus implementaciones
-en los paquetes `steps` y `hook`. Cucumber utiliza un BOM 7.18.0 compartido y
-JUnit utiliza el BOM 5.10.2, la versión empleada por el motor de Cucumber
-7.18.0. La configuración sigue la
+La suite [`RunCucumberTest`](src/test/java/runner/RunCucumberTest.java) es el
+runner: el punto de entrada que reúne y ejecuta los escenarios. Utiliza JUnit
+Platform para buscar los archivos `.feature` bajo `src/test/resources/Feature`
+y sus implementaciones en los paquetes `steps` y `hook`. Cucumber utiliza el
+BOM 7.18.0 y JUnit el BOM 5.10.2, la versión empleada por ese motor de
+Cucumber. La configuración sigue la
 [suite recomendada por Cucumber](https://github.com/cucumber/cucumber-jvm/blob/v7.18.0/cucumber-junit-platform-engine/README.md#suites-with-different-configurations).
 
 Para ejecutar los escenarios con Chrome desde la raíz, utiliza:
@@ -110,6 +111,26 @@ Para ejecutar los escenarios con Chrome desde la raíz, utiliza:
 ```bash
 ./gradlew test
 ```
+
+Para ejecutar únicamente los dos escenarios implementados de User ID, utiliza:
+
+```bash
+./gradlew test -PcucumberTags="@userId" --rerun-tasks
+```
+
+Puedes combinar etiquetas con `and`, `or` y `not`, por ejemplo,
+`-PcucumberTags="@userId and not @userIdTabla"`. Para filtrar por el nombre
+del escenario, utiliza una expresión regular:
+
+```bash
+./gradlew test -PcucumberName="Generar y completar el User ID desde la tabla"
+```
+
+En este motor, la expresión debe coincidir con el nombre completo. Para buscar
+una parte, utiliza `.*`, por ejemplo, `-PcucumberName=".*desde la tabla.*"`.
+
+Si indicas ambos filtros, el escenario debe cumplir los dos. `--rerun-tasks`
+fuerza una nueva ejecución cuando Gradle considera las pruebas actualizadas.
 
 Para comprobar que Cucumber encuentra el escenario y sus definiciones de
 pasos sin abrir Chrome ni ejecutar los hooks o las acciones, utiliza:
@@ -122,11 +143,44 @@ El modo simulación no valida el registro, los resultados esperados ni el códig
 interno de los pasos. Tampoco comprueba que el método del formulario reciba
 correctamente la tabla de datos. La ejecución normal permanece activa por
 defecto; el modo simulación solo se habilita para el comando que incluye la
-propiedad `cucumberDryRun=true`.
+propiedad `cucumberDryRun=true`. Puedes combinarla con los filtros anteriores.
 
-Después de cualquiera de las dos ejecuciones, el informe de Gradle está en
-`build/reports/tests/test/index.html`. El informe corresponde a la última
-ejecución de la tarea `test`.
+Gradle reenvía estas opciones al proceso Java que ejecuta los tests:
+
+| Opción de Gradle | Propiedad de Cucumber | Valor predeterminado |
+| --- | --- | --- |
+| `-PcucumberDryRun=true` | `cucumber.execution.dry-run` | `false` |
+| `-PcucumberTags="@userId"` | `cucumber.filter.tags` | Sin filtro |
+| `-PcucumberName="expresión"` | `cucumber.filter.name` | Sin filtro |
+
+También puedes pasar las propiedades de Cucumber mediante `-D`, por ejemplo,
+`./gradlew test -Dcucumber.filter.tags="@userId"`. Si defines la misma opción
+con `-P` y `-D`, tiene prioridad `-P`.
+
+Para ejecutar desde IntelliJ, abre `RunCucumberTest.java` y utiliza el icono
+de ejecución junto a la clase. También puedes crear una configuración Gradle
+con `test -PcucumberTags="@userId"`. Las opciones `-P` pertenecen a Gradle;
+si ejecutas directamente la suite como JUnit, usa las propiedades `-D` en
+**VM options**. Para simular allí, agrega
+`-Dcucumber.execution.dry-run=true`.
+
+### Reportes
+
+Cada ejecución genera reportes locales, además del resumen de consola:
+
+| Reporte | Archivo |
+| --- | --- |
+| Cucumber HTML, con escenarios y pasos | `build/reports/cucumber/cucumber.html` |
+| Cucumber JSON, para otras herramientas | `build/reports/cucumber/cucumber.json` |
+| Cucumber JUnit XML, para integración continua | `build/reports/cucumber/cucumber.xml` |
+| Gradle HTML | `build/reports/tests/test/index.html` |
+
+Los reportes corresponden a la última ejecución y sus filtros; una simulación
+también los sobrescribe y no demuestra que las acciones web funcionen. Los
+reportes de Gradle se generan al ejecutar desde Gradle. Al ejecutar directamente
+la clase en IntelliJ, usa la raíz del proyecto como **Working directory** para
+conservar las rutas de los reportes Cucumber. `./gradlew clean` elimina los
+archivos generados bajo `build/`.
 
 ## Estado de los tests
 
@@ -139,10 +193,11 @@ navegación **Sign In → Register Now** y validan que el formulario esté visib
 Para ejecutar únicamente las pruebas de User ID en macOS, utiliza:
 
 ```bash
-JAVA_TOOL_OPTIONS=-Dcucumber.filter.tags=@userId ./gradlew test --rerun-tasks
+./gradlew test -PcucumberTags="@userId" --rerun-tasks
 ```
 
-Este comando aplica el filtro al proceso Java de pruebas. En esta suite con
+Este comando aplica el filtro al proceso Java de pruebas sin configurar
+`JAVA_TOOL_OPTIONS` para todas las JVM. En esta suite con
 JUnit Platform, `CUCUMBER_FILTER_TAGS=@userId` no filtró los escenarios durante
 la verificación del 9 de noviembre de 2026.
 

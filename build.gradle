@@ -71,7 +71,24 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     systemProperty 'cucumber.execution.dry-run',
-            providers.gradleProperty('cucumberDryRun').getOrElse('false')
+            providers.gradleProperty('cucumberDryRun')
+                    .orElse(providers.systemProperty('cucumber.execution.dry-run'))
+                    .getOrElse('false')
+
+    // Gradle ejecuta las pruebas en otra JVM: reenviar los filtros explícitamente.
+    def cucumberTags = providers.gradleProperty('cucumberTags')
+            .orElse(providers.systemProperty('cucumber.filter.tags'))
+    if (cucumberTags.isPresent()) {
+        systemProperty 'cucumber.filter.tags', cucumberTags.get()
+    }
+
+    def cucumberName = providers.gradleProperty('cucumberName')
+            .orElse(providers.systemProperty('cucumber.filter.name'))
+    if (cucumberName.isPresent()) {
+        systemProperty 'cucumber.filter.name', cucumberName.get()
+    }
+
+    outputs.dir(layout.buildDirectory.dir('reports/cucumber'))
     testLogging {
         events 'passed', 'skipped', 'failed'
     }
