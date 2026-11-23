@@ -1,3 +1,4 @@
+@web @signup
 Feature: Registro de Nueva Cuenta de Usuario (Sign Up)
   Como un usuario nuevo de JPetStore
   Quiero registrar mis credenciales, datos de contacto y preferencias
@@ -9,14 +10,14 @@ Feature: Registro de Nueva Cuenta de Usuario (Sign Up)
     And da click en "Register Now"
     Then ingresa a la página de registro
 
-  @userId
+  @technical @userId
   Scenario: Completar y reemplazar el User ID sin guardar la cuenta
     When ingresa el User ID "UQA0000001" en el formulario de registro
     Then el campo User ID del registro contiene "UQA0000001"
     When ingresa el User ID "UQA0000002" en el formulario de registro
     Then el campo User ID del registro contiene "UQA0000002"
 
-  @userId @userIdTabla
+  @technical @userId @userIdTabla
   Scenario: Generar y completar el User ID desde la tabla
     When completa el formulario con los siguientes datos:
       | Campo   | Valor                                  |
@@ -31,13 +32,13 @@ Feature: Registro de Nueva Cuenta de Usuario (Sign Up)
   # FLUJOS POSITIVOS (HAPPY PATH)
   # ---------------------------------------------------------------------------
 
-  @smoke @positive
+  @alta @regression @smoke @positive
   Scenario: TC-SIGNUP-01 - Registro exitoso con valores por defecto en preferencias de perfil
     When completa el formulario con los siguientes datos:
       | Campo           | Valor                                      |
       | User ID         | U + 9 caracteres alfanuméricos generados   |
-      | New password    | P@ssw0rd2026!+                             |
-      | Repeat password | P@ssw0rd2026!+                             |
+      | New password    | contraseña generada del escenario          |
+      | Repeat password | contraseña generada del escenario          |
       | First name      | Carlos                                     |
       | Last name       | Tester                                     |
       | Email           | qa_user_{timestamp}@testpetstore.com       |

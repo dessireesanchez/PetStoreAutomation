@@ -4,7 +4,6 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.By;
 import interfaces.ButtonClick;
 
-import java.net.URI;
 import java.util.List;
 
 public class HomePage extends BasePage implements ButtonClick {
@@ -22,13 +21,12 @@ public class HomePage extends BasePage implements ButtonClick {
         click(signInLink);
     }
 
-    public void waitForPath(String path) {
-        wait.until(currentDriver -> path.equals(
-                URI.create(currentDriver.getCurrentUrl()).getPath()));
+    public void signOut() {
+        clickAndWaitForPage(By.linkText("Sign Out"));
     }
 
-    public String getCurrentPath() {
-        return URI.create(driver.getCurrentUrl()).getPath();
+    public void openMyAccount() {
+        click(By.linkText("My Account"));
     }
 
     public List<String> getNavigationLinks() {
@@ -37,10 +35,6 @@ public class HomePage extends BasePage implements ButtonClick {
                 .filter(link -> link.isDisplayed())
                 .map(link -> link.getText().strip())
                 .toList();
-    }
-
-    public String getPageText() {
-        return getText(By.tagName("body"));
     }
 
     @Override

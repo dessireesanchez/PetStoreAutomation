@@ -115,7 +115,7 @@ Para ejecutar los escenarios con Chrome desde la raíz, utiliza:
 Para ejecutar únicamente los dos escenarios implementados de User ID, utiliza:
 
 ```bash
-./gradlew test -PcucumberTags="@userId" --rerun-tasks
+./gradlew test --tests runner.RunCucumberTest -PcucumberTags="@userId" --rerun-tasks
 ```
 
 Puedes combinar etiquetas con `and`, `or` y `not`, por ejemplo,
@@ -123,7 +123,7 @@ Puedes combinar etiquetas con `and`, `or` y `not`, por ejemplo,
 del escenario, utiliza una expresión regular:
 
 ```bash
-./gradlew test -PcucumberName="Generar y completar el User ID desde la tabla"
+./gradlew test --tests runner.RunCucumberTest -PcucumberName="Generar y completar el User ID desde la tabla"
 ```
 
 En este motor, la expresión debe coincidir con el nombre completo. Para buscar
@@ -136,7 +136,7 @@ Para comprobar que Cucumber encuentra el escenario y sus definiciones de
 pasos sin abrir Chrome ni ejecutar los hooks o las acciones, utiliza:
 
 ```bash
-./gradlew test -PcucumberDryRun=true
+./gradlew test --tests runner.RunCucumberTest -PcucumberDryRun=true
 ```
 
 El modo simulación no valida el registro, los resultados esperados ni el código
@@ -184,7 +184,9 @@ archivos generados bajo `build/`.
 
 ## Estado de los tests
 
-El archivo `src/test/resources/Feature/CreateUser/CreateUser.feature` contiene
+La cobertura web contiene 42 escenarios y variantes: los tres recorridos
+originales, 26 de validación de registro y 13 de Sign In y sesión.
+`src/test/resources/Feature/CreateUser/CreateUser.feature` conserva
 el escenario completo `TC-SIGNUP-01` y dos escenarios `@userId`. Uno comprueba
 la escritura directa y sustitución del campo; el otro genera User ID desde la
 tabla y después lo sustituye por un valor explícito. Todos utilizan la
@@ -193,7 +195,7 @@ navegación **Sign In → Register Now** y validan que el formulario esté visib
 Para ejecutar únicamente las pruebas de User ID en macOS, utiliza:
 
 ```bash
-./gradlew test -PcucumberTags="@userId" --rerun-tasks
+./gradlew test --tests runner.RunCucumberTest -PcucumberTags="@userId" --rerun-tasks
 ```
 
 Este comando aplica el filtro al proceso Java de pruebas sin configurar
@@ -221,28 +223,115 @@ El 10 de noviembre de 2026 las dos pruebas de User ID pasan con Chrome. La
 prueba de tabla comprueba el formato generado, su igualdad con el contenido
 del campo y su sustitución por `UQA0000003`.
 
-El 12 de noviembre de 2026 la suite completa aprueba los tres escenarios con
-Chrome. `TC-SIGNUP-01` completa los doce campos, comprueba las preferencias
+`TC-SIGNUP-01` completa los doce campos, comprueba las preferencias
 por defecto (`english`, `FISH`, MyList y MyBanner desmarcados) y pulsa
 **Save Account Information**. Comprueba la ruta `/catalog` con **Sign In**
 visible y sin **Sign Out** ni **My Account**. Después inicia sesión con el
 User ID y la contraseña recién registrados y comprueba **Sign Out**,
-**My Account** y el saludo con el nombre ingresado. Estas aserciones
+**My Account** y el saludo con el nombre ingresado. Lee además el User ID
+exacto desde **My Account** y vuelve a catálogo. Estas aserciones
 sustituyen la comprobación anterior del texto `docs`.
 
-Para ejecutar únicamente este recorrido real, utiliza:
+Para ejecutar únicamente este recorrido real, utiliza su ID:
 
 ```bash
-./gradlew test -PcucumberTags="@smoke" --rerun-tasks
+./gradlew test --tests runner.RunCucumberTest '-PcucumberName=TC-SIGNUP-01.*' --rerun-tasks
 ```
 
-La ejecución completa o con `@smoke` crea una cuenta sintética en JPetStore.
+El recorrido crea una cuenta sintética en JPetStore; la suite completa prepara
+otras cuentas dentro de los escenarios que las necesitan.
 Las pruebas `@userId` solo escriben campos y no guardan cuentas. Los reportes
 quedan en las rutas indicadas arriba; el modo simulación no crea cuentas.
 
-La cobertura restante de prioridad alta sigue pendiente: variantes negativas
-de registro y Sign In, login positivo por email y Remember Me. La inspección
-por UI observó rechazo del login por email y ausencia de Remember Me; las
-expectativas de esos requisitos se mantienen. Los documentos de trabajo y
-los informes de defectos se conservan localmente en `IA/local/`. La prueba
-de vencimiento a los catorce días está excluida del alcance acordado.
+`RegistrationValidation.feature` cubre duplicados, confirmación distinta,
+complejidad y límites de contraseña, doce campos obligatorios, conservación
+del formulario ante error y ausencia de sesión automática. `SignIn.feature`
+cubre acceso por User ID y email, rechazos, campos vacíos, máscara de
+contraseña, presencia de Remember Me y cierre de sesión. Las cuentas que
+necesitan existir se crean y verifican por UI dentro del propio escenario.
+
+Los incumplimientos de JPetStore conservan sus expectativas y hacen fallar
+la prueba. Un HTTP 500 no se considera un rechazo funcional válido. Los
+mensajes de registro deben explicar el motivo correspondiente; los tests
+no se limitan a aceptar cualquier texto de error. Las comprobaciones de
+persistencia de Remember Me siguen bloqueadas por la ausencia del control.
+La prueba de vencimiento a los catorce días está excluida.
+
+### Datos de contraseña y evidencia
+
+Las contraseñas de prueba se generan en memoria con `SecureRandom` durante
+la ejecución. Java y Gherkin contienen reglas y descriptores, sin valores
+literales de credenciales. La tabla del recorrido principal usa
+`contraseña generada del escenario` para contraseña y confirmación. Los
+ejemplos de frontera indican longitud o regla que debe incumplirse.
+
+Las pruebas de `PasswordDataTest` comprueban la forma de los datos generados
+y la redacción de diagnósticos. Los valores se registran solo durante el
+escenario para ocultarlos en mensajes; ese registro se limpia al terminar.
+Un fallo adjunta URL, texto visible y una captura al reporte Cucumber. La
+captura se omite si pudiera mostrar una credencial. Los informes detallados
+de resultados y defectos se conservan localmente en `IA/local/`.
+
+### Ejecución durante el desarrollo
+
+Las etiquetas separan funcionalidad, prioridad y propósito. Sus cantidades
+incluyen las variantes de `Examples`, no solo las definiciones de escenarios:
+
+| Filtro | Variantes | Selección |
+| --- | ---: | --- |
+| `@web` | 42 | Todos los escenarios web. |
+| `@alta` o `@regression` | 40 | Casos funcionales del alcance acordado. |
+| `@signup` | 29 | Registro, incluidos los dos casos técnicos. |
+| `@signup and not @technical` | 27 | Casos funcionales de registro. |
+| `@signin` | 13 | Login y sesión. |
+| `@smoke` | 2 | TC-SIGNUP-01 y TC-SIGNUP-12, identificados en el plan original. |
+| `@technical` o `@userId` | 2 | Escritura y sustitución de User ID, sin guardar la cuenta. |
+
+`@alta` expresa prioridad funcional; `@smoke` selecciona una comprobación
+breve del registro. Ninguno depende del resultado aprobado o fallido de
+la última ejecución. Los casos que reproducen defectos siguen incluidos.
+Los dos smoke mantienen sus objetivos trazables aunque compartan recorrido:
+registro válido con preferencias por defecto y ausencia de sesión automática.
+
+Para ejecutar solo smoke, utiliza:
+
+```bash
+./gradlew test --tests runner.RunCucumberTest -PcucumberTags=@smoke --rerun-tasks
+```
+
+Ejecuta primero el escenario concreto, después el bloque afectado si cambia
+código compartido y al finalizar una ejecución general. Para seleccionar
+una sola variante web, utiliza el runner y el nombre completo o su regex:
+
+```bash
+./gradlew test --tests runner.RunCucumberTest '-PcucumberName=TC-SIGNIN-02.*User ID' --rerun-tasks
+```
+
+Para ejecutar las pruebas de datos sin abrir Chrome, utiliza:
+
+```bash
+./gradlew test --tests data.PasswordDataTest --rerun-tasks
+./gradlew test --tests page.RegistrationErrorReasonTest --rerun-tasks
+```
+
+Para ejecutar un bloque web, utiliza etiquetas:
+
+```bash
+./gradlew test --tests runner.RunCucumberTest -PcucumberTags=@signin --rerun-tasks
+./gradlew test --tests runner.RunCucumberTest -PcucumberTags=@validacionRegistro --rerun-tasks
+```
+
+Al terminar, `./gradlew test --rerun-tasks` ejecuta la cobertura completa,
+incluidos los casos que reproducen defectos. Gradle también puede listar
+escenarios filtrados como `SKIPPED`; esos escenarios no abren el navegador
+ni realizan acciones. La suite completa conserva los fallos del producto,
+por lo que no se debe interpretar un build fallido como un fallo automático
+del código de pruebas sin revisar el resultado y la evidencia de cada caso.
+
+En la general final del 12 de noviembre de 2026 se ejecutaron 42 escenarios
+web: 16 aprobados y 26 fallidos frente a los requisitos documentados. Las
+30 pruebas unitarias del soporte pasaron. Los fallos se agruparon en nueve
+hallazgos en el informe local. El acceso que muestra sesión al enviar ambos
+campos de login vacíos se recomienda como primera revisión. TC-SIGNUP-11
+no pudo comprobar conservación de datos porque el email duplicado no provocó
+el error requerido. No hubo omisiones ni fallos de cierre del navegador.

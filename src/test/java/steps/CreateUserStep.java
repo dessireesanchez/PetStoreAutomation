@@ -1,13 +1,15 @@
 package steps;
 
 import driver.DriverManager;
+import data.RegistrationValueResolver;
+import data.RegistrationData;
+import flow.RegistrationFlow;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.PendingException;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import org.apache.commons.lang3.RandomStringUtils;
 import page.HomePage;
 import page.SignInPage;
 import page.RegistrationPage;
@@ -21,11 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class CreateUserStep {
 
-    private static final String GENERAR_USER_ID =
-            "U + 9 caracteres alfanuméricos generados";
-
     private final Map<String, String> datosRegistro = new HashMap<>();
-    private final String timestamp = Long.toString(System.currentTimeMillis());
+    private final RegistrationValueResolver resolver = new RegistrationValueResolver();
 
     private final HomePage homePage = new HomePage(DriverManager.getDriver());
     private final SignInPage signInPage =
@@ -113,23 +112,13 @@ public class CreateUserStep {
                     .as("El campo '%s' debe tener un valor de prueba", campo)
                     .isNotBlank();
 
-            String resuelto = resolverValor(campo, valor);
+            String resuelto = resolver.resolve(campo, valor);
             registrationPage.enterField(campo, resuelto);
             assertThat(resuelto.equals(registrationPage.getFieldValue(campo)))
                     .as("El campo '%s' debe contener el valor resuelto", campo)
                     .isTrue();
             datosRegistro.put(campo, resuelto);
         }
-    }
-
-    private String resolverValor(String campo, String valor) {
-        if ("User ID".equals(campo) && GENERAR_USER_ID.equals(valor)) {
-            return "U" + RandomStringUtils.randomAlphanumeric(9);
-        }
-        if ("Email".equals(campo)) {
-            return valor.replace("{timestamp}", timestamp);
-        }
-        return valor;
     }
 
     @Then("el campo Email del registro contiene un timestamp generado")
@@ -161,12 +150,8 @@ public class CreateUserStep {
 
     @Then("la página de inicio muestra al usuario registrado autenticado")
     public void laPaginaMuestraAlUsuarioRegistradoAutenticado() {
-        homePage.waitForPath("/catalog");
-        assertThat(homePage.getNavigationLinks())
-                .contains("Sign Out", "My Account")
-                .doesNotContain("Sign In");
-        assertThat(homePage.getPageText())
-                .contains("Welcome " + datoRegistrado("First name") + "!");
+        new RegistrationFlow(DriverManager.getDriver())
+                .assertAuthenticated(new RegistrationData(datosRegistro));
     }
 
     @And("ingresa el User ID registrado")

@@ -42,6 +42,10 @@ public class RegistrationPage extends BasePage {
         return find(fieldLocator(field)).getDomProperty("value");
     }
 
+    public String getFieldInputName(String field) {
+        return find(fieldLocator(field)).getDomAttribute("name");
+    }
+
     public void enterUserId(String userId) {
         enterField("User ID", userId);
     }
@@ -67,7 +71,7 @@ public class RegistrationPage extends BasePage {
     }
 
     public void saveAccountInformation() {
-        click(saveAccountButton);
+        submitForm(saveAccountButton);
     }
 
     private By fieldLocator(String field) {

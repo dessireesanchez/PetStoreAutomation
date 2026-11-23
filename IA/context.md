@@ -1,6 +1,6 @@
 # Resumen
 
-Contexto actualizado el 12 de noviembre de 2026. PetStoreAutomation automatiza
+Contexto actualizado el 13 de noviembre de 2026. PetStoreAutomation automatiza
 pruebas web de JPetStore con Selenium y Cucumber. El entorno de trabajo es macOS
 con Java 21. La raíz actual es
 `/Users/dessireesanchez/Proyectos/PetStoreAutomation`.
@@ -13,7 +13,9 @@ escenarios desde Gradle. El paso del formulario recibe las doce filas,
 completa y verifica sus campos, resuelve `{timestamp}` en Email y conserva
 los datos por escenario. TC-SIGNUP-01 ya guarda la cuenta, comprueba la
 redirección anónima a `/catalog` y autentica con el User ID y la contraseña
-registrados. La suite completa de tres escenarios pasa con Chrome.
+registrados. Los tres escenarios originales siguen pasando dentro de la
+cobertura ampliada: 42 escenarios web, 16 aprobados y 26 fallidos frente a los
+requisitos documentados. Las 30 pruebas unitarias del soporte pasan.
 
 El 12 de noviembre de 2026 se preparó
 `IA/local/cobertura_prioridad_alta_autenticacion.md` para la cobertura de registro
@@ -40,8 +42,43 @@ incumplimientos: ausencia de Remember Me (DEF-AUTH-001) y rechazo de login
 por email (DEF-AUTH-002). El informe y la evidencia textual quedan en
 `IA/local/inspeccion_autenticacion_2026-11-12.md`. Después se completó la
 automatización del registro válido y del acceso por User ID en el escenario
-existente. Siguen pendientes los casos de email, Remember Me y las variantes
-negativas, conservando las expectativas para reproducir los incumplimientos.
+existente. Después se añadieron 26 variantes de registro y 13 de Sign In y
+sesión, conservando las expectativas para reproducir los incumplimientos.
+La ejecución final terminó con 26 fallos funcionales agrupados en nueve
+hallazgos. DEF-AUTH-003 documenta que el envío de ambos campos de login vacíos
+muestra una sesión autenticada en la UI; se recomienda priorizarlo. Los
+resultados, 26 capturas y el snapshot de Cucumber quedan en
+`IA/local/resultados_cobertura_alta_2026-11-12.md` y `IA/local/evidencias/`.
+
+La usuaria pidió no guardar contraseñas en el código. Los valores literales
+se retiraron de Java y Gherkin: ahora se generan en memoria por escenario
+con `SecureRandom`, incluidas las variantes inválidas. También pidió ejecutar
+casos concretos durante el desarrollo, el bloque afectado al cambiar soporte
+compartido y una general al terminar. Se documentaron los comandos con
+`--tests` para seleccionar el runner web o las clases unitarias.
+
+El 13 de noviembre se compararon las notas de la clase 12 con el proyecto,
+sin ejecutar pruebas ni modificar el código. La comparación se conserva en
+`IA/local/comparacion_clase_12_2026-11-13.md`. Confirma la preparación
+independiente por UI, el runner, los reportes y el tratamiento de HTTP 500
+como defecto. Después, por solicitud de la usuaria de preparar el commit,
+se corrigieron las etiquetas: `@alta` y `@regression` incluyen las 40 variantes
+funcionales; `@signup` incluye 29, de las cuales dos son `@technical` sin
+guardar cuentas. TC-SIGNUP-01 queda incluido en esos filtros y `@smoke`
+selecciona TC-SIGNUP-01 y TC-SIGNUP-12 conforme al plan original. Hay 18
+definiciones que producen 42 ejecuciones. La selección y su justificación se
+conservan en `IA/local/seleccion_casos_2026-11-13.md`. La fórmula del semáforo
+no aparece en las notas; se dejó para la clase siguiente y no se inventaron
+ponderaciones. Los criterios de salida del plan original no están satisfechos
+por los fallos documentados.
+
+La verificación posterior de etiquetas descubrió 42 escenarios en modo
+simulación de Cucumber y comprobó las cantidades indicadas mediante los
+metadatos del reporte. Las 30 pruebas unitarias del soporte pasaron en esa
+ejecución. No se abrió Chrome ni se repitió la general funcional; su snapshot
+real permanece en `IA/local/evidencias/cobertura_alta_final/`. Los reportes
+actuales de `build/` corresponden a la simulación, no a una nueva aprobación
+del comportamiento web.
 
 # Arquitectura y módulos
 
@@ -49,20 +86,36 @@ El proyecto Gradle tiene un único módulo. Los tests se organizan por
 responsabilidad:
 
 - `driver/DriverManager.java`: crea un ChromeDriver por hilo y lo cierra.
-- `hook/Hook.java`: obtiene y cierra el driver antes y después del escenario.
-- `page/BasePage.java`: navegación, búsqueda, interacción y esperas.
+- `hook/Hook.java`: prepara y cierra el driver, limpia secretos por escenario
+  y adjunta evidencia redactada al fallar; omite capturas sensibles.
+- `page/BasePage.java`: navegación, interacción, lectura de mensajes y espera
+  de sustitución del formulario y `document.readyState` tras el envío.
 - `page/HomePage.java`: navegación, espera y lectura de la ruta actual,
   enlaces visibles de `MenuContent` y texto de la página.
 - `page/SignInPage.java`: clic en **Register Now**, escritura de identificador
   y contraseña, y envío con el botón `signon` (**Login**).
 - `page/RegistrationPage.java`: mapa de campos a localizadores confirmados,
   escritura y lectura de valores, lectura de preferencias y guardado.
+- `page/AccountPage.java`: lectura del User ID desde My Account sin editarlo.
+- `page/RegistrationErrorReason.java`: comprobación semántica del motivo de
+  los mensajes de rechazo, con sus pruebas unitarias.
+- `data/RegistrationData.java`: fixture inmutable de registro por escenario.
+- `data/PasswordData.java`: generación de datos de contraseña válidos y de
+  una sola regla inválida, con pruebas unitarias.
+- `data/ScenarioSecrets.java`: registro temporal y redacción de secretos.
+- `data/RegistrationValueResolver.java`: resolución de tokens de la tabla.
+- `flow/RegistrationFlow.java`: preparación de cuentas por UI, verificación
+  de credenciales e identidad exacta, y cierre de sesión de preparación.
 - `interfaces/ButtonClick.java`: contrato `darClick()` implementado por
   `HomePage` y `SignInPage`.
 - `steps/CreateUserStep.java`: definiciones de los pasos de registro y login.
+- `steps/SignInStep.java`: variantes positivas, negativas y de sesión.
+- `steps/RegistrationValidationStep.java`: duplicados, contraseñas,
+  obligatoriedad, conservación ante error y registro anónimo.
 - `runner/RunCucumberTest.java`: suite JUnit Platform para el motor Cucumber,
   los recursos `Feature` y el glue `steps,hook`.
-- `src/test/resources/Feature/CreateUser/`: escenario Gherkin.
+- `src/test/resources/Feature/CreateUser/`: recorrido y validaciones de registro.
+- `src/test/resources/Feature/SignIn/`: escenarios de Sign In y sesión.
 
 `src/main/java/org/example/Main.java` conserva el ejemplo inicial del IDE.
 La suite compartida sustituye la dependencia de las configuraciones personales
@@ -124,14 +177,17 @@ Las preferencias observadas por defecto fueron `english`, `FISH` y ambas
 casillas desmarcadas. Esos localizadores ya están incorporados a los Page
 Objects. La sesión anónima se comprueba por `Sign In` visible sin `Sign Out`
 ni `My Account`; tras login se exigen los dos últimos, ausencia de `Sign In`
-y `Welcome <nombre registrado>!`. Las rutas se comparan exactamente por su
-path, con una espera explícita de navegación.
+y `Welcome <nombre registrado>!`. Además se lee el User ID exacto desde
+My Account y se vuelve a catálogo. Las rutas se comparan por su path.
+Se retiró la espera implícita global: las interacciones usan esperas explícitas.
+Los rechazos exigen mensajes funcionales visibles, no una página HTTP 500;
+duplicados, confirmación y complejidad comprueban también el motivo semántico.
 
 # Módulos de datos
 
-Los datos se describen en el feature. No existen modelos ni archivos externos
-de datos. La tabla se convierte en `List<Map<String, String>>` con
-`asMaps(String.class, String.class)`.
+Los datos se describen mediante tablas o reglas en Gherkin y fixtures
+inmutables de `RegistrationData`. La tabla del recorrido original se
+convierte en `List<Map<String, String>>` con `asMaps(String.class, String.class)`.
 
 Para User ID, la indicación `U + 9 caracteres alfanuméricos generados` se
 resuelve con `"U" + RandomStringUtils.randomAlphanumeric(9)`, reutilizando
@@ -142,16 +198,29 @@ aleatoria no garantiza que el nombre esté disponible en el servidor.
 
 Email sustituye `{timestamp}` por el valor de `System.currentTimeMillis()`
 capturado al crear la instancia de pasos. Un paso independiente comprueba
-el patrón `qa_user_[0-9]+@testpetstore[.]com`. El resto de valores se utiliza
-literalmente. Las aserciones de escritura comparan booleanos con el nombre
+el patrón `qa_user_[0-9]+@testpetstore[.]com`. En las fixtures nuevas, el email
+incorpora timestamp y User ID para reducir colisiones. El descriptor
+`contraseña generada del escenario` resuelve una misma contraseña de doce
+caracteres para New password y Repeat password. Las fixtures y las variantes
+de frontera o complejidad también generan sus contraseñas en memoria.
+Las aserciones de escritura comparan booleanos con el nombre
 del campo para evitar exponer contraseñas en los mensajes de comparación.
-La ejecución `@smoke` y la suite completa crean una cuenta sintética; los
-escenarios `@userId` no guardan cuentas. No hay eliminación de cuentas por API
-ni base de datos.
+Cada escenario `@smoke` crea su cuenta sintética; la suite completa prepara
+otras cuentas por escenario. Los escenarios `@userId` no guardan cuentas.
+No hay eliminación de cuentas por API
+ni base de datos. Los fixtures de cuenta se crean y verifican dentro de cada
+escenario; no se depende de que otro escenario haya preparado la cuenta.
+
+`ScenarioSecrets` usa un ThreadLocal limpiado antes y después del escenario.
+Redacta los valores generados en los mensajes y el texto visible. Las
+excepciones al enviar contraseñas no incluyen el valor enviado. Las capturas
+se omiten si se detecta una credencial expuesta. Las pruebas de datos evitan
+imprimir el contenido de las contraseñas en sus aserciones.
 
 # Estándares y convenciones del código
 
-Los paquetes se separan en `driver`, `hook`, `page`, `steps` y `runner`.
+Los paquetes se separan en `driver`, `hook`, `page`, `steps`, `runner`,
+`data` y `flow`.
 Las clases usan PascalCase y los métodos camelCase. Los pasos están escritos
 en español y las palabras clave de Gherkin en inglés. Se utiliza el patrón
 Page Object y un `ThreadLocal` para el driver.
@@ -186,6 +255,13 @@ reenvía estas opciones a la JVM de pruebas y admite las propiedades equivalente
 `-Dcucumber.execution.dry-run`, `-Dcucumber.filter.tags` y
 `-Dcucumber.filter.name`. Las opciones `-P` tienen prioridad sobre `-D`.
 
+Los filtros de Cucumber no filtran las pruebas unitarias de Jupiter. Para
+ejecutar solo una variante web se usa, por ejemplo, `./gradlew test --tests
+runner.RunCucumberTest '-PcucumberName=TC-SIGNIN-02.*User ID' --rerun-tasks`.
+Para datos o interpretación de errores se seleccionan `data.PasswordDataTest`
+o `page.RegistrationErrorReasonTest` con `--tests`. Gradle puede listar como
+`SKIPPED` los escenarios filtrados sin ejecutarlos ni abrir Chrome para ellos.
+
 La suite tiene el nombre visible `Pruebas de JPetStore` y usa los plugins
 `pretty,summary,html,json,junit`. Los reportes Cucumber se escriben en
 `build/reports/cucumber/cucumber.html`, `cucumber.json` y `cucumber.xml`.
@@ -194,6 +270,31 @@ Gradle registra ese directorio como salida de la tarea `test` y también genera
 ejecución, incluidos sus filtros y el modo simulación.
 
 # Riesgos, supuestos y limitaciones
+
+Ejecución final de cobertura alta, 12 de noviembre de 2026:
+
+- Comando: `./gradlew test --rerun-tasks --no-daemon --console=plain
+  --warning-mode=fail`. Resultado: `BUILD FAILED`, 72 tests, 26 fallidos.
+- Cucumber: 42 escenarios, 16 aprobados, 26 fallidos; sin omisiones ni hooks
+  fallidos. Jupiter: 30 pruebas unitarias, todas aprobadas.
+- Los fallos se agrupan en nueve requisitos incumplidos: Remember Me ausente,
+  login por email rechazado, sesión al enviar ambos campos vacíos, duplicado
+  de User ID idéntico con HTTP 500, cambio de mayúsculas sin rechazo, email
+  duplicado sin rechazo, confirmación distinta, complejidad y obligatoriedad.
+- TC-SIGNUP-11 no llegó a comprobar conservación/vaciado porque no se provoca
+  el error por email duplicado. Sus comprobaciones quedan bloqueadas por ese
+  incumplimiento. Los negativos por email aprobados no acreditan el soporte
+  del login por email mientras su caso positivo falla.
+- En una general intermedia se detectó una carrera al leer errores antes de
+  terminar el envío. Se corrigió la sincronización del formulario y se
+  verificó solo TC-SIGNIN-02 mediante User ID; pasó y también pasó en la
+  general final. Ese fallo de automatización no se reportó como defecto web.
+- La revisión independiente encontró dos falsos positivos potenciales:
+  saludo compartido por todas las cuentas y aceptación de cualquier mensaje.
+  Se corrigieron con identidad exacta y motivos semánticos; la revisión de
+  los ajustes no encontró problemas materiales adicionales.
+- Se inspeccionaron las capturas del HTTP 500 por duplicado y de la sesión
+  mostrada con campos vacíos. No se infieren datos de DB ni causas internas.
 
 Verificación del registro y login por User ID el 12 de noviembre de 2026:
 
@@ -341,10 +442,11 @@ una restricción de escritura del archivo de bloqueo bajo `~/.gradle` en esta
 sesión. Las invocaciones directas de `./gradlew` sí pudieron completar la
 compilación descrita. Esa limitación no se atribuye al código del proyecto.
 
-Continúan pendientes las variantes negativas de prioridad alta, las pruebas
-de login por email y Remember Me, la revisión de dependencias y la combinación
-de esperas implícitas y explícitas. La actualización local del contexto con
-la inspección previa se conservó al comenzar esta implementación.
+Quedan bloqueadas las pruebas de persistencia que requieren activar Remember
+Me porque el control no existe en la UI. Bloqueo de cuenta, duración de sesión
+ordinaria y destinos protegidos siguen sin definición suficiente. No se
+inventaron reglas para esos puntos ni se añadieron casos Should/Could.
+La actualización local del contexto con la inspección previa se conservó.
 
 `IA/local/context_analisis_2026-11-03.md` conserva el análisis histórico del
 entorno Windows. Sus rutas son históricas; Java 21 vuelve a ser la versión
