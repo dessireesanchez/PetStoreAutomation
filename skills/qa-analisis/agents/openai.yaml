@@ -1,4 +1,0 @@
-interface:
-  display_name: "Análisis QA de requisitos"
-  short_description: "Gaps, riesgos y ambigüedades de requisitos"
-  default_prompt: "Usa $qa-analisis para revisar el documento funcional indicado, aplicar el perfil de proyecto si está disponible y generar el informe con la plantilla de la skill."
